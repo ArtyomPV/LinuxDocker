@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+
+  db:
+    image: postgres:15.3
+    container_name: postgres_db
+    restart: always
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "django_user"
+      POSTGRES_PASSWORD: "django_password"
+      POSTGRES_DB: "django_db"
+    ports:
+      - 5432:5432
+
+
+  web:
+    build: ./app
+    container_name: django
+    restart: always
+    command: sh -c "python manage.py migrate && python manage.py createsuperuser --noinput && gunicorn django_app.wsgi:application --bind 0.0.0.0:8000"
+    environment:
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_PASSWORD=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@example.com
+    volumes:
+      - ./app/:/usr/src/app/
+      - ./app/static/:/usr/src/app/static/
+      - ./app/media/:/usr/src/app/media/
+    expose:
+      - 8000
+#    ports:
+#      - 8000:8000
+    env_file:
+      - ./.env.dev
+    depends_on:
+      - db
+#        condition: service_healthy
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    ports:
+      - 1337:80
+    depends_on:
+      - web
+    volumes:
+      - ./app/static/:/usr/src/app/static/
+      - ./app/media/:/usr/src/app/media/
+volumes:
+  postgres:
+  static_volume:
+  media_volume:
